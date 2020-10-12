@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<meta charset="UTF-8">
 <html>
 <head>
 <!--<meta charset="utf-8">-->
@@ -160,40 +161,45 @@ function updateWeather() {
 	var DEF_CITY_NAME = 'London,CA';
 	var DEF_QUERY = 'https://api.openweathermap.org/data/2.5/weather?q='+DEF_CITY_NAME+'&APPID='+API_KEY;
 
-	var lat_txt;
-	var lon_txt;
 	var loc_err = '';
+	var QUERY;
 
-	var tryAPIGeolocation = function() {
-		jQuery.post( "https://www.googleapis.com/geolocation/v1/geolocate?key=AIzaSyDCa1LUe1vOczX1hO_iGYgyo8p_jYuGOPU", function(success) {
-			// getPosition({coords: {latitude: success.location.lat, longitude: success.location.lng}});
-			lat_txt = success.location.lat.toString();
-			lon_txt = success.location.lng.toString();
-			console.log("Getting weather info from Lat: "+lat_txt+" Lon: "+lon_txt);
-		})
-		.fail(function(err) {
-		loc_err = err;
-		console.log("API Geolocation error!"+err);
-		});
-	};
+	function getCoords(position) {
+		var lat_txt = position.coords.latitude;
+		var lon_txt = position.coords.longitude;
 
-	var QUERY = '';
-	if (loc_err != '') {
+		// console.log("Getting weather info from Lat: "+lat_txt+" Lon: "+lon_txt);
 		QUERY = 'https://api.openweathermap.org/data/2.5/weather?lat='+lat_txt+'&lon='+lon_txt+'&APPID='+API_KEY;
-		console.log("Getting weather info from Lat: "+lat_txt+" Lon: "+lon_txt);
+
+		fetch(QUERY)
+		.then(function(resp) { return resp.json(); })
+		.then(function(data) {
+			// console.log(data);
+			writeWeather(data);
+		})
+		.catch(function() {});
+
+	}
+
+	if (navigator.geolocation) {
+		navigator.geolocation.getCurrentPosition(getCoords);
 	}
 	else {
+		loc_err = 'Unable to use geolocation!';
+		console.log(loc_err);
+
 		QUERY = DEF_QUERY;
 		console.log("Failed with location info. Falling back to London.");
+
+				fetch(QUERY)
+		.then(function(resp) { return resp.json(); })
+		.then(function(data) {
+			// console.log(data);
+			writeWeather(data);
+		})
+		.catch(function() {});
 	}
 
-	fetch(QUERY)
-	.then(function(resp) { return resp.json(); })
-	.then(function(data) {
-		// console.log(data);
-		writeWeather(data);
-	})
-	.catch(function() {});
 };
 
 function writeWeather( d ) {
