@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+<head>
+<!--<meta charset="utf-8">-->
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<script type='text/javascript' src='api.js'></script>
+
+<style lang="scss">
+    html,body {
+        height: 90%;
+    }
+    body {
+        background: #0f3854;
+        background: radial-gradient(ellipse at center,  #0a2e38  0%, #000000 70%);
+        background-size: 100%;
+    }
+    p {
+        margin: 0;
+        padding: 0;
+    }
+    #clock {
+        font-family: 'Menlo', monospace;
+        color: #ffffff;
+        text-align: center;
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        color: #daf6ff;
+        text-shadow: 0 0 20px rgba(10, 175, 230, 1),  0 0 20px rgba(10, 175, 230, 0);
+    }
+    p.time {
+        letter-spacing: 0.05em;
+        font-size: 18vh;
+        padding: 5px 0;
+    }
+    p.ampm {
+        letter-spacing: 0.2em;
+        font-size: 9vh;
+        padding: 5px 0;
+    }
+    p.date {
+        letter-spacing: 0.05em;
+        font-size: 8vh;
+    }
+	p.weather_city {
+		letter-spacing: 0.1em;
+		font-size: 6vh;
+	}
+	p.weather_desc {
+		letter-spacing: 0.1em;
+		font-size: 5vh;
+	}
+	p.weather_temp {
+		letter-spacing: 0.1em;
+		font-size: 5vh;
+	}
+	p.weather_humi {
+		letter-spacing: 0.1em;
+		font-size: 5vh;
+	}
+    p.text {
+        letter-spacing: 0.1em;
+        font-size: 3vh;
+        padding: 20px 0 0;
+    }
+
+</style>
+
+</head>
+
+<body>
+
+<div id="clock">
+    <p class="date">{{ date }}</p>
+    <table style="width:100%">
+    	<tr>
+    	<th valign="top"><p class="ampm">{{ ampm }}</p></th>
+    	<th><p class="time">{{ time }}</p></th>
+		</tr>
+    </table>
+	<p class="weather_city">{{ weather_city }}</p>
+	<p class="weather_desc">{{ weather_desc }}</p>
+	<p class="weather_temp">{{ weather_temp }}</p>
+	<p class="weather_humi">{{ weather_humi }}</p>
+    <p class="text">DIGITAL CLOCK with Vue.js</p>
+</div>
+
+<script src="vue/vue.min.js"></script>
+<script>
+
+var clock = new Vue({
+    el: '#clock',
+    data: {
+    	ampm: '',
+        time: '',
+        date: '',
+		weather_city: '',
+		weather_desc: '',
+		weather_temp: '',
+		weather_humi: '',
+    }
+});
+
+// Clock and data stuff
+var week = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+var months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+var timerID = setInterval(updateTime, 1000);
+var weatherID = setInterval(updateWeather, 10000);
+
+updateTime();
+updateWeather();
+
+function updateTime() {
+    var cd = new Date();
+
+    var hh = cd.getHours();
+    var hh_ampm = 0;
+    var ampm_text = 'AM';
+
+    var mm = cd.getMinutes();
+    var ss = cd.getSeconds();
+
+    if ( hh == 0 || hh == 24 ) {
+    	hh_ampm = 12;
+    	ampm_text = 'AM';
+    }
+    else if ( hh == 12 ) {
+    	hh_ampm = hh;
+    	ampm_text = 'PM';
+    }
+    else if ( hh >= 13 && hh <= 23 ) {
+    	hh_ampm = hh - 12;
+    	ampm_text = 'PM';
+    }
+
+    var day = cd.getDay();
+    var month = cd.getMonth();
+    var date_ = cd.getDate();
+    var date_suffix = 'th';
+    var date_rem = date_%10;
+    if (date_ != 11 && date_ != 12) {
+    	if (date_rem == 1) { date_suffix = 'st'; }
+    	else if (date_rem == 2) { date_suffix = 'nd'; }
+    	else if (date_rem == 3) { date_suffix = 'rd'; }
+	}
+
+    var year = cd.getFullYear();
+
+    clock.ampm = ampm_text;
+    clock.time = zeroPadding(hh_ampm, 2) + ':' + zeroPadding(mm, 2) + ':' + zeroPadding(ss, 2);
+    clock.date = week[day] + ' ' + months[month] + ' ' + zeroPadding(date_, 2) + date_suffix + ' ' + zeroPadding(year, 4)
+};
+
+// TODO: Gotta set this thing up with a free SSL... Google API method doesn't work.
+function updateWeather() {
+	var API_KEY = api.KEY;
+	var DEF_CITY_NAME = 'London,CA';
+	var DEF_QUERY = 'https://api.openweathermap.org/data/2.5/weather?q='+DEF_CITY_NAME+'&APPID='+API_KEY;
+
+	var lat_txt;
+	var lon_txt;
+	var loc_err = '';
+
+	var tryAPIGeolocation = function() {
+		jQuery.post( "https://www.googleapis.com/geolocation/v1/geolocate?key=AIzaSyDCa1LUe1vOczX1hO_iGYgyo8p_jYuGOPU", function(success) {
+			// getPosition({coords: {latitude: success.location.lat, longitude: success.location.lng}});
+			lat_txt = success.location.lat.toString();
+			lon_txt = success.location.lng.toString();
+			console.log("Getting weather info from Lat: "+lat_txt+" Lon: "+lon_txt);
+		})
+		.fail(function(err) {
+		loc_err = err;
+		console.log("API Geolocation error!"+err);
+		});
+	};
+
+	var QUERY = '';
+	if (loc_err != '') {
+		QUERY = 'https://api.openweathermap.org/data/2.5/weather?lat='+lat_txt+'&lon='+lon_txt+'&APPID='+API_KEY;
+		console.log("Getting weather info from Lat: "+lat_txt+" Lon: "+lon_txt);
+	}
+	else {
+		QUERY = DEF_QUERY;
+		console.log("Failed with location info. Falling back to London.");
+	}
+
+	fetch(QUERY)
+	.then(function(resp) { return resp.json(); })
+	.then(function(data) {
+		// console.log(data);
+		writeWeather(data);
+	})
+	.catch(function() {});
+};
+
+function writeWeather( d ) {
+	var celcius = Math.round(parseFloat(d.main.temp)-273.15);
+	var celcius_fl = Math.round(parseFloat(d.main.feels_like)-273.15);
+	var fahrenheit = Math.round(((parseFloat(d.main.temp)-273.15)*1.8)+32);
+	var fahrenheit_fl = Math.round(((parseFloat(d.main.feels_like)-273.15)*1.8)+32);
+	var description = d.weather[0].description;
+	var humidity = d.main.humidity;
+
+	clock.weather_city = d.name + ", " + description;
+	clock.weather_temp = celcius + "°C, " + "Feels like: " + celcius_fl + "°C";
+	clock.weather_humi = 'Humidity: ' + humidity + '%';
+
+};
+
+function zeroPadding(num, digit) {
+    var zero = '';
+    for(var i = 0; i < digit; i++) {
+        zero += '0';
+    }
+    return (zero + num).slice(-digit);
+};
+
+</script>
+</body>
+</html>
