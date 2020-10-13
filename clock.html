@@ -142,6 +142,10 @@ function updateTime() {
     	hh_ampm = hh - 12;
     	ampm_text = 'PM';
     }
+    else {
+    	hh_ampm = hh;
+    	ampm_text = 'AM';
+    }
 
     var day = cd.getDay();
     var month = cd.getMonth();
