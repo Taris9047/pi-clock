@@ -5,7 +5,7 @@
 <!--<meta charset="utf-8">-->
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<script type='text/javascript' src='api.js'></script>
+<script type='text/javascript' src='.api.js'></script>
 
 <style lang="scss">
     html,body {
@@ -108,6 +108,12 @@ var clock = new Vue({
 var week = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 var months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
+const API_KEY = api.KEY;
+const DEF_CITY_NAME = 'London,CA';
+const DEF_QUERY = 'https://api.openweathermap.org/data/2.5/weather?q='+DEF_CITY_NAME+'&APPID='+API_KEY;
+var loc_err = '';
+var QUERY;
+
 var timerID = setInterval(updateTime, 1000);
 var weatherID = setInterval(updateWeather, 10000);
 
@@ -157,32 +163,11 @@ function updateTime() {
 
 // TODO: Gotta set this thing up with a free SSL... Google API method doesn't work.
 function updateWeather() {
-	var API_KEY = api.KEY;
-	var DEF_CITY_NAME = 'London,CA';
-	var DEF_QUERY = 'https://api.openweathermap.org/data/2.5/weather?q='+DEF_CITY_NAME+'&APPID='+API_KEY;
 
-	var loc_err = '';
-	var QUERY;
 
-	function getCoords(position) {
-		var lat_txt = position.coords.latitude;
-		var lon_txt = position.coords.longitude;
-
-		// console.log("Getting weather info from Lat: "+lat_txt+" Lon: "+lon_txt);
-		QUERY = 'https://api.openweathermap.org/data/2.5/weather?lat='+lat_txt+'&lon='+lon_txt+'&APPID='+API_KEY;
-
-		fetch(QUERY)
-		.then(function(resp) { return resp.json(); })
-		.then(function(data) {
-			// console.log(data);
-			writeWeather(data);
-		})
-		.catch(function() {});
-
-	}
 
 	if (navigator.geolocation) {
-		navigator.geolocation.getCurrentPosition(getCoords);
+		navigator.geolocation.getCurrentPosition(getCoords, getCoordsErr, { maximumAge: 600000, timeout: 10000 });
 	}
 	else {
 		loc_err = 'Unable to use geolocation!';
@@ -191,10 +176,9 @@ function updateWeather() {
 		QUERY = DEF_QUERY;
 		console.log("Failed with location info. Falling back to London.");
 
-				fetch(QUERY)
+		fetch(QUERY)
 		.then(function(resp) { return resp.json(); })
 		.then(function(data) {
-			// console.log(data);
 			writeWeather(data);
 		})
 		.catch(function() {});
@@ -202,7 +186,40 @@ function updateWeather() {
 
 };
 
-function writeWeather( d ) {
+function getCoords(position) {
+	var lat_txt = position.coords.latitude.toString();
+	var lon_txt = position.coords.longitude.toString();
+
+	// console.log("Getting weather info from Lat: "+lat_txt+" Lon: "+lon_txt);
+	var QUERY = 'https://api.openweathermap.org/data/2.5/weather?lat='+lat_txt+'&lon='+lon_txt+'&APPID='+API_KEY;
+
+	fetch(QUERY)
+	.then(function(resp) { return resp.json(); })
+	.then(function(data) {
+		writeWeather(data);
+	})
+	.catch(function() {});
+};
+
+function getCoordsErr(err) {
+
+	if (err) {
+
+		console.log(err);
+
+		QUERY = DEF_QUERY;
+		console.log("Failed with location info. Falling back to London.");
+
+		fetch(QUERY)
+		.then(function(resp) { return resp.json(); })
+		.then(function(data) {
+			writeWeather(data, err);
+		})
+		.catch(function() {});
+	}
+};
+
+function writeWeather( d, err='none' ) {
 	var celcius = Math.round(parseFloat(d.main.temp)-273.15);
 	var celcius_fl = Math.round(parseFloat(d.main.feels_like)-273.15);
 	var fahrenheit = Math.round(((parseFloat(d.main.temp)-273.15)*1.8)+32);
@@ -210,10 +227,14 @@ function writeWeather( d ) {
 	var description = d.weather[0].description;
 	var humidity = d.main.humidity;
 
-	clock.weather_city = d.name + ", " + description;
+	if (err == 'none') {
+		clock.weather_city = d.name + ", " + description;
+	}
+	else {
+		clock.weather_city = DEF_CITY_NAME + " " + description;
+	}
 	clock.weather_temp = celcius + "°C, " + "Feels like: " + celcius_fl + "°C";
 	clock.weather_humi = 'Humidity: ' + humidity + '%';
-
 };
 
 function zeroPadding(num, digit) {
