@@ -109,6 +109,7 @@ var week = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 var months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 const API_KEY = api.KEY;
+// Change here if you moved to other location.
 const DEF_CITY_NAME = 'London,CA';
 const DEF_QUERY = 'https://api.openweathermap.org/data/2.5/weather?q='+DEF_CITY_NAME+'&APPID='+API_KEY;
 var loc_err = '';
@@ -231,14 +232,17 @@ function writeWeather( d, err='none' ) {
 	var description = d.weather[0].description;
 	var humidity = d.main.humidity;
 
+	var celc_unit = "°C";
+	var fahr_unit = "°F";
+
 	if (err == 'none') {
 		clock.weather_city = d.name + ", " + description;
 	}
 	else {
-		clock.weather_city = DEF_CITY_NAME + " " + description;
+		clock.weather_city = DEF_CITY_NAME + ", " + description;
 	}
-	clock.weather_temp = celcius + "°C, " + "Feels like: " + celcius_fl + "°C";
-	clock.weather_humi = 'Humidity: ' + humidity + '%';
+	clock.weather_temp = celcius + celc_unit + ", Feels like: " + celcius_fl + celc_unit;
+	clock.weather_humi = "Humidity: " + humidity + "%";
 };
 
 function zeroPadding(num, digit) {
